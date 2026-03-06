@@ -183,12 +183,11 @@ export default function LemonGame() {
   useEffect(() => { gridStateRef.current = grid }, [grid])
   useEffect(() => { comboRef.current = combo }, [combo])
 
-  // ── Score count-up: 기존 속도 유지, 숫자 1회 올라갈 때마다 팡 1회 ──
+  // ── Score count-up: 시작하면 커지고 컬러 변경 → 카운트 → 끝나면 원래대로 ──
   useEffect(() => {
     const startVal = displayScoreRef.current
     const endVal = score
     if (startVal === endVal) return
-    // Reset instantly on game restart
     if (endVal === 0) {
       displayScoreRef.current = 0
       setDisplayScore(0)
@@ -198,20 +197,17 @@ export default function LemonGame() {
     const diff = endVal - startVal
     const stepSize = diff > 100 ? Math.ceil(diff / 16) : diff > 20 ? 2 : 1
     let cur = startVal
-    let pulseFrame = false // alternates: pulse up → pulse down → next step
+
+    setScoreVisual(PULSE)
 
     const tick = () => {
-      if (!pulseFrame) {
-        cur = Math.min(cur + stepSize, endVal)
-        displayScoreRef.current = cur
-        setDisplayScore(cur)
-        setScoreVisual(PULSE)
-        pulseFrame = true
+      cur = Math.min(cur + stepSize, endVal)
+      displayScoreRef.current = cur
+      setDisplayScore(cur)
+      if (cur < endVal) {
         rafRef.current = requestAnimationFrame(tick)
       } else {
         setScoreVisual(NORMAL)
-        pulseFrame = false
-        if (cur < endVal) rafRef.current = requestAnimationFrame(tick)
       }
     }
     cancelAnimationFrame(rafRef.current)
@@ -388,6 +384,7 @@ export default function LemonGame() {
             ...S.scoreValue,
             transform: `scale(${scoreVisual.scale})`,
             color: scoreVisual.color,
+            transition: 'transform 120ms ease-out, color 120ms ease-out',
           }}>
             {displayScore.toLocaleString()}
           </div>
