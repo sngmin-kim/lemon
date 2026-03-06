@@ -53,7 +53,20 @@ function findClearableAreas(grid) {
           }
 
   areas.sort((a, b) => b.count - a.count)
-  return areas.slice(0, 50)
+
+  // Greedy non-overlapping selection: pick highest-count areas that don't share any tile
+  const selected = []
+  for (const area of areas) {
+    const overlaps = selected.some(s =>
+      !(area.maxRow < s.minRow || area.minRow > s.maxRow ||
+        area.maxCol < s.minCol || area.minCol > s.maxCol)
+    )
+    if (!overlaps) {
+      selected.push(area)
+      if (selected.length >= 20) break
+    }
+  }
+  return selected
 }
 
 function initGrid() {
@@ -559,18 +572,14 @@ const S = {
     flex: 1,
     minHeight: 0,
     position: 'relative',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '6px',
+    overflow: 'hidden',
   },
   grid: {
     display: 'grid',
     gridTemplateColumns: `repeat(${COLS}, 1fr)`,
     gridTemplateRows: `repeat(${ROWS}, 1fr)`,
     aspectRatio: `${COLS} / ${ROWS}`,
-    maxWidth: '100%',
-    maxHeight: '100%',
+    width: '100%',
     position: 'relative',
     touchAction: 'none',
     cursor: 'crosshair',
