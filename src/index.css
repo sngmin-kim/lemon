@@ -36,15 +36,6 @@ html, body {
   100% { opacity: 1; transform: scale(1); }
 }
 
-@keyframes scorePop {
-  0%   { transform: scale(1);   color: #1c1c1e; }
-  18%  { transform: scale(1.9); color: #f97316; }
-  36%  { transform: scale(1.3); color: #1c1c1e; }
-  54%  { transform: scale(1.6); color: #f97316; }
-  72%  { transform: scale(1.1); color: #1c1c1e; }
-  86%  { transform: scale(1.3); color: #f97316; }
-  100% { transform: scale(1);   color: #1c1c1e; }
-}
 
 @keyframes clearPop {
   0%   { transform: scale(1);   opacity: 0.85; }

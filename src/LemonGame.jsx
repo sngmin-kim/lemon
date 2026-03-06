@@ -176,23 +176,43 @@ export default function LemonGame() {
   const comboRef = useRef(combo)
   const rafRef = useRef(null)
   const displayScoreRef = useRef(0)
+  const [scoreVisual, setScoreVisual] = useState({ scale: 1, color: '#1c1c1e' })
+  const PULSE = { scale: 1.7, color: '#f97316' }
+  const NORMAL = { scale: 1, color: '#1c1c1e' }
 
   useEffect(() => { gridStateRef.current = grid }, [grid])
   useEffect(() => { comboRef.current = combo }, [combo])
 
-  // ── Score count-up animation — fixed 650ms to match scorePop CSS ──
+  // ── Score count-up: 기존 속도 유지, 숫자 1회 올라갈 때마다 팡 1회 ──
   useEffect(() => {
     const startVal = displayScoreRef.current
     const endVal = score
     if (startVal === endVal) return
-    const startTime = performance.now()
-    const tick = (now) => {
-      const t = Math.min((now - startTime) / 650, 1)
-      const eased = 1 - (1 - t) * (1 - t) // ease-out quad
-      const val = Math.round(startVal + (endVal - startVal) * eased)
-      displayScoreRef.current = val
-      setDisplayScore(val)
-      if (t < 1) rafRef.current = requestAnimationFrame(tick)
+    // Reset instantly on game restart
+    if (endVal === 0) {
+      displayScoreRef.current = 0
+      setDisplayScore(0)
+      setScoreVisual(NORMAL)
+      return
+    }
+    const diff = endVal - startVal
+    const stepSize = diff > 100 ? Math.ceil(diff / 8) : diff > 20 ? 4 : 1
+    let cur = startVal
+    let pulseFrame = false // alternates: pulse up → pulse down → next step
+
+    const tick = () => {
+      if (!pulseFrame) {
+        cur = Math.min(cur + stepSize, endVal)
+        displayScoreRef.current = cur
+        setDisplayScore(cur)
+        setScoreVisual(PULSE)
+        pulseFrame = true
+        rafRef.current = requestAnimationFrame(tick)
+      } else {
+        setScoreVisual(NORMAL)
+        pulseFrame = false
+        if (cur < endVal) rafRef.current = requestAnimationFrame(tick)
+      }
     }
     cancelAnimationFrame(rafRef.current)
     rafRef.current = requestAnimationFrame(tick)
@@ -224,6 +244,7 @@ export default function LemonGame() {
     cancelAnimationFrame(rafRef.current)
     setGrid(initGrid())
     setScore(0); setDisplayScore(0); setTimeLeft(GAME_DURATION); setCombo(0)
+    setScoreVisual({ scale: 1, color: '#1c1c1e' })
     setDrag(null); setFloats([]); setBursts([]); setClearEffects([]); setClearableAreas([])
     setGameStatus('playing')
   }, [])
@@ -363,10 +384,11 @@ export default function LemonGame() {
         {/* Score — centered, with pop animation */}
         <div style={S.headerCenter}>
           {combo >= 2 && <div style={S.comboTag}>{combo}x COMBO!</div>}
-          <div
-            key={score}
-            style={{ ...S.scoreValue, animation: score > 0 ? 'scorePop 650ms ease-out' : 'none' }}
-          >
+          <div style={{
+            ...S.scoreValue,
+            transform: `scale(${scoreVisual.scale})`,
+            color: scoreVisual.color,
+          }}>
             {displayScore.toLocaleString()}
           </div>
         </div>
