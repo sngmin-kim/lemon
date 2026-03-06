@@ -7,7 +7,6 @@ const GAME_DURATION = 120
 const COMBO_TIMEOUT_MS = 2500
 const GOLDEN_CHANCE = 0.10
 
-// Bonus points for clearing many tiles at once
 function getSizeBonus(count) {
   if (count >= 7) return 40
   if (count >= 6) return 25
@@ -17,16 +16,14 @@ function getSizeBonus(count) {
   return 0
 }
 function getSizeLabel(count) {
-  if (count >= 7) return '🔥 AMAZING'
-  if (count >= 6) return '🔥 AWESOME'
-  if (count >= 5) return '✨ GREAT'
-  if (count >= 4) return '👍 NICE'
-  if (count >= 3) return '💫 GOOD'
+  if (count >= 7) return 'AMAZING'
+  if (count >= 6) return 'AWESOME'
+  if (count >= 5) return 'GREAT'
+  if (count >= 4) return 'NICE'
+  if (count >= 3) return 'GOOD'
   return null
 }
 
-// Find all rectangular areas in the grid where non-cleared tile sum = 10
-// Uses 2D prefix sums — O(ROWS² × COLS²), ~29k iters ≈ instant
 function findClearableAreas(grid) {
   const val = Array.from({ length: ROWS }, (_, r) =>
     Array.from({ length: COLS }, (_, c) => (grid[r][c].isCleared ? 0 : grid[r][c].value))
@@ -54,7 +51,6 @@ function findClearableAreas(grid) {
 
   areas.sort((a, b) => b.count - a.count)
 
-  // Greedy non-overlapping selection: pick highest-count areas that don't share any tile
   const selected = []
   for (const area of areas) {
     const overlaps = selected.some(s =>
@@ -89,29 +85,19 @@ function getBounds(drag) {
   }
 }
 
-// Radial sparkle burst for golden clears
+// Golden sparkle burst
 function GoldenBurst({ leftPct, topPct }) {
   return (
     <>
       {[0, 45, 90, 135, 180, 225, 270, 315].map(angle => (
-        <div
-          key={angle}
-          style={{
-            position: 'absolute',
-            left: leftPct,
-            top: topPct,
-            width: 0,
-            height: 0,
-            transform: `rotate(${angle}deg)`,
-            transformOrigin: '0 0',
-            pointerEvents: 'none',
-            zIndex: 30,
-          }}
-        >
+        <div key={angle} style={{
+          position: 'absolute', left: leftPct, top: topPct,
+          width: 0, height: 0,
+          transform: `rotate(${angle}deg)`, transformOrigin: '0 0',
+          pointerEvents: 'none', zIndex: 30,
+        }}>
           <div style={{
-            width: 7,
-            height: 7,
-            borderRadius: '50%',
+            width: 7, height: 7, borderRadius: '50%',
             background: 'radial-gradient(circle, #fff 0%, #ffd700 55%, #ff9500 100%)',
             animation: 'goldenSparkle 0.65s ease-out forwards',
           }} />
@@ -123,38 +109,39 @@ function GoldenBurst({ leftPct, topPct }) {
 
 // ── Tile ──────────────────────────────────────────────────────────────────────
 const Tile = memo(function Tile({ value, isCleared, isSelected, isValid, isGolden }) {
-  let bg, shadow, textColor
+  let bg, shadow, textColor, border
 
   if (isGolden) {
     bg = isSelected
       ? (isValid
-        ? 'linear-gradient(145deg, #fff59d 0%, #ffb300 100%)'
-        : 'linear-gradient(145deg, #ffe082 0%, #ffa000 100%)')
-      : 'linear-gradient(145deg, #ffd54f 0%, #e65100 100%)'
-    shadow = '0 2px 6px rgba(0,0,0,0.55), inset 0 1px 2px rgba(255,255,255,0.35)'
+        ? 'linear-gradient(145deg, #ffe76b 0%, #ffa820 100%)'
+        : 'linear-gradient(145deg, #f0c050 0%, #d08010 100%)')
+      : 'linear-gradient(145deg, #ffd24a 0%, #f07820 100%)'
+    shadow = '0 1px 3px rgba(0,0,0,0.14), 0 1px 2px rgba(0,0,0,0.08)'
     textColor = '#3d1400'
+    border = '1px solid rgba(160,70,0,0.18)'
   } else {
     bg = isSelected
       ? (isValid
-        ? 'linear-gradient(145deg, #7986cb 0%, #3949ab 100%)'
-        : 'linear-gradient(145deg, #757575 0%, #424242 100%)')
-      : 'linear-gradient(145deg, #62626e 0%, #3a3a46 100%)'
-    shadow = '0 2px 5px rgba(0,0,0,0.55), inset 0 1px 2px rgba(255,255,255,0.07)'
-    textColor = '#e8e8f2'
+        ? 'linear-gradient(145deg, #6494f7 0%, #2d62ef 100%)'
+        : 'linear-gradient(145deg, #b8b8cc 0%, #9898ae 100%)')
+      : 'linear-gradient(145deg, #eaebf2 0%, #d8dae8 100%)'
+    shadow = '0 1px 3px rgba(0,0,0,0.10), 0 1px 2px rgba(0,0,0,0.06)'
+    textColor = isSelected && isValid ? '#fff' : '#2c2c3e'
+    border = '1px solid rgba(0,0,0,0.08)'
   }
 
   return (
     <div style={S.tileOuter}>
-      <div
-        style={{
-          ...S.tileInner,
-          background: isCleared ? 'transparent' : bg,
-          boxShadow: isCleared ? 'none' : shadow,
-          color: isCleared ? 'transparent' : textColor,
-          transform: isCleared ? 'scale(0)' : (isSelected ? 'scale(1.1)' : 'scale(1)'),
-          opacity: isCleared ? 0 : 1,
-        }}
-      >
+      <div style={{
+        ...S.tileInner,
+        background: isCleared ? 'transparent' : bg,
+        boxShadow: isCleared ? 'none' : shadow,
+        border: isCleared ? 'none' : border,
+        color: isCleared ? 'transparent' : textColor,
+        transform: isCleared ? 'scale(0)' : (isSelected ? 'scale(1.08)' : 'scale(1)'),
+        opacity: isCleared ? 0 : 1,
+      }}>
         {!isCleared && value}
       </div>
     </div>
@@ -171,12 +158,14 @@ const Tile = memo(function Tile({ value, isCleared, isSelected, isValid, isGolde
 export default function LemonGame() {
   const [grid, setGrid] = useState(() => initGrid())
   const [score, setScore] = useState(0)
+  const [displayScore, setDisplayScore] = useState(0)
   const [timeLeft, setTimeLeft] = useState(GAME_DURATION)
   const [gameStatus, setGameStatus] = useState('idle')
   const [combo, setCombo] = useState(0)
   const [drag, setDrag] = useState(null)
   const [floats, setFloats] = useState([])
   const [bursts, setBursts] = useState([])
+  const [clearEffects, setClearEffects] = useState([])
   const [clearableAreas, setClearableAreas] = useState([])
 
   const gridRef = useRef(null)
@@ -185,9 +174,30 @@ export default function LemonGame() {
   const effectIdRef = useRef(0)
   const gridStateRef = useRef(grid)
   const comboRef = useRef(combo)
+  const scoreTargetRef = useRef(0)
+  const rafRef = useRef(null)
 
   useEffect(() => { gridStateRef.current = grid }, [grid])
   useEffect(() => { comboRef.current = combo }, [combo])
+
+  // ── Score count-up animation ──
+  useEffect(() => {
+    scoreTargetRef.current = score
+    const tick = () => {
+      setDisplayScore(prev => {
+        const target = scoreTargetRef.current
+        if (prev >= target) return target
+        const diff = target - prev
+        const step = diff > 100 ? Math.ceil(diff / 8) : diff > 20 ? 4 : 1
+        const next = Math.min(prev + step, target)
+        if (next < target) rafRef.current = requestAnimationFrame(tick)
+        return next
+      })
+    }
+    cancelAnimationFrame(rafRef.current)
+    rafRef.current = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [score])
 
   // ── Timer ──
   useEffect(() => {
@@ -211,13 +221,13 @@ export default function LemonGame() {
   const startGame = useCallback(() => {
     clearInterval(timerRef.current)
     clearTimeout(comboTimerRef.current)
+    cancelAnimationFrame(rafRef.current)
     setGrid(initGrid())
-    setScore(0); setTimeLeft(GAME_DURATION); setCombo(0)
-    setDrag(null); setFloats([]); setBursts([]); setClearableAreas([])
+    setScore(0); setDisplayScore(0); setTimeLeft(GAME_DURATION); setCombo(0)
+    setDrag(null); setFloats([]); setBursts([]); setClearEffects([]); setClearableAreas([])
     setGameStatus('playing')
   }, [])
 
-  // ── Pointer helpers ──
   const getCellFromPointer = useCallback((clientX, clientY) => {
     const el = gridRef.current
     if (!el) return null
@@ -260,19 +270,17 @@ export default function LemonGame() {
       for (let c = minCol; c <= maxCol; c++)
         if (!g[r][c].isCleared) {
           sum += g[r][c].value
-          tiles.push({ r, c })
+          tiles.push({ r, c, isGolden: g[r][c].isGolden })
           if (g[r][c].isGolden) goldenCount++
         }
 
     if (sum === TARGET_SUM && tiles.length > 0) {
-      // Clear tiles
       setGrid(prev => {
         const next = prev.map(row => row.map(cell => ({ ...cell })))
         tiles.forEach(({ r, c }) => { next[r][c].isCleared = true })
         return next
       })
 
-      // Score
       const newCombo = comboRef.current + 1
       const sizeBonus = getSizeBonus(tiles.length)
       const goldenBonus = goldenCount * 30
@@ -282,22 +290,34 @@ export default function LemonGame() {
       clearTimeout(comboTimerRef.current)
       comboTimerRef.current = setTimeout(() => setCombo(0), COMBO_TIMEOUT_MS)
 
-      // ── Float label(s) ──
+      // ── Per-tile clear pop effects ──
+      const eid = ++effectIdRef.current
+      const tileEffects = tiles.map(({ r, c, isGolden }) => ({
+        id: `${eid}-${r}-${c}`,
+        leftPct: `${c / COLS * 100}%`,
+        topPct: `${r / ROWS * 100}%`,
+        isGolden,
+      }))
+      setClearEffects(prev => [...prev, ...tileEffects])
+      setTimeout(() => {
+        const ids = new Set(tileEffects.map(t => t.id))
+        setClearEffects(prev => prev.filter(e => !ids.has(e.id)))
+      }, 450)
+
+      // ── Float labels ──
       const leftPct = `${minCol / COLS * 100}%`
       const topPct = `${minRow / ROWS * 100}%`
       const id = ++effectIdRef.current
-
-      const lines = [{ text: `+${basePoints}`, color: '#ffe566', size: 22 }]
+      const lines = [{ text: `+${basePoints}`, color: '#1d4ed8', size: 22 }]
       const sizeLabel = getSizeLabel(tiles.length)
       if (sizeLabel && sizeBonus > 0)
-        lines.push({ text: `${sizeLabel}  +${sizeBonus}`, color: '#ff9900', size: 13 })
+        lines.push({ text: `${sizeLabel}  +${sizeBonus}`, color: '#c2410c', size: 13 })
       if (goldenBonus > 0)
-        lines.push({ text: `⭐ GOLDEN  +${goldenBonus}`, color: '#ffd700', size: 13 })
+        lines.push({ text: `GOLDEN  +${goldenBonus}`, color: '#92400e', size: 13 })
 
       setFloats(prev => [...prev, { id, lines, leftPct, topPct }])
       setTimeout(() => setFloats(prev => prev.filter(f => f.id !== id)), 1100)
 
-      // ── Golden burst ──
       if (goldenBonus > 0) {
         const bid = ++effectIdRef.current
         setBursts(prev => [...prev, { id: bid, leftPct, topPct }])
@@ -319,18 +339,20 @@ export default function LemonGame() {
   const isValid = selectionSum === TARGET_SUM
 
   const timerPct = timeLeft / GAME_DURATION * 100
-  const timerColor = timeLeft <= 10 ? '#ff4444' : timeLeft <= 30 ? '#ffaa00' : '#7fff7f'
+  const timerColor = timeLeft <= 10 ? '#ef4444' : timeLeft <= 30 ? '#f59e0b' : '#22c55e'
+
+  // Tile border-radius in vw to match tile's 20% of (100vw/17) = ~1.18vw
+  const HINT_RADIUS = '1.2vw'
 
   return (
     <div style={S.root}>
 
       {/* ── Header ── */}
       <header style={S.header}>
-        {/* Timer progress bar — full width, shrinks over time */}
+        {/* Timer progress bar */}
         <div style={{
           position: 'absolute',
-          bottom: 0,
-          left: 0,
+          bottom: 0, left: 0,
           height: 4,
           width: gameStatus === 'playing' ? `${timerPct}%` : (gameStatus === 'idle' ? '100%' : '0%'),
           background: timerColor,
@@ -338,13 +360,18 @@ export default function LemonGame() {
           borderRadius: '0 2px 0 0',
         }} />
 
-        {/* Score — centered */}
+        {/* Score — centered, with pop animation */}
         <div style={S.headerCenter}>
           {combo >= 2 && <div style={S.comboTag}>{combo}x COMBO!</div>}
-          <div style={S.scoreValue}>{score.toLocaleString()}</div>
+          <div
+            key={score}
+            style={{ ...S.scoreValue, animation: score > 0 ? 'scorePop 0.65s ease-out' : 'none' }}
+          >
+            {displayScore.toLocaleString()}
+          </div>
         </div>
 
-        {/* Restart button — right side, only when game over */}
+        {/* Restart button */}
         {gameStatus === 'over' && (
           <button onClick={startGame} style={S.restartBtn}>다시하기</button>
         )}
@@ -379,29 +406,42 @@ export default function LemonGame() {
             })
           )}
 
-          {/* Clearable area hints (game over only) */}
+          {/* Per-tile clear pop effects */}
+          {clearEffects.map(e => (
+            <div key={e.id} style={{
+              position: 'absolute',
+              left: e.leftPct,
+              top: e.topPct,
+              width: `${100 / COLS}%`,
+              height: `${100 / ROWS}%`,
+              boxSizing: 'border-box',
+              border: `2.5px solid ${e.isGolden ? '#f59e0b' : '#6494f7'}`,
+              borderRadius: HINT_RADIUS,
+              animation: 'clearPop 0.4s ease-out forwards',
+              pointerEvents: 'none',
+              zIndex: 15,
+            }} />
+          ))}
+
+          {/* Clearable area hints (game over) */}
           {gameStatus === 'over' && clearableAreas.map((area, i) => {
             const big = area.count >= 5
             const mid = area.count >= 3
-            const hue = big ? 142 : mid ? 210 : 0
-            const alpha = big ? 0.55 : mid ? 0.42 : 0.30
+            const hue = big ? 142 : mid ? 217 : 25
             return (
-              <div
-                key={i}
-                style={{
-                  position: 'absolute',
-                  left:   `${area.minCol / COLS * 100}%`,
-                  top:    `${area.minRow / ROWS * 100}%`,
-                  width:  `${(area.maxCol - area.minCol + 1) / COLS * 100}%`,
-                  height: `${(area.maxRow - area.minRow + 1) / ROWS * 100}%`,
-                  border: `2px solid hsla(${hue}, 75%, 65%, ${alpha + 0.3})`,
-                  background: `hsla(${hue}, 60%, 50%, ${alpha * 0.28})`,
-                  borderRadius: 3,
-                  boxSizing: 'border-box',
-                  pointerEvents: 'none',
-                  zIndex: 5,
-                }}
-              />
+              <div key={i} style={{
+                position: 'absolute',
+                left:   `${area.minCol / COLS * 100}%`,
+                top:    `${area.minRow / ROWS * 100}%`,
+                width:  `${(area.maxCol - area.minCol + 1) / COLS * 100}%`,
+                height: `${(area.maxRow - area.minRow + 1) / ROWS * 100}%`,
+                border: `2px solid hsla(${hue}, 72%, 48%, 0.75)`,
+                background: `hsla(${hue}, 65%, 55%, 0.12)`,
+                borderRadius: HINT_RADIUS,
+                boxSizing: 'border-box',
+                pointerEvents: 'none',
+                zIndex: 5,
+              }} />
             )
           })}
 
@@ -413,22 +453,21 @@ export default function LemonGame() {
               top:    `${bounds.minRow / ROWS * 100}%`,
               width:  `${(bounds.maxCol - bounds.minCol + 1) / COLS * 100}%`,
               height: `${(bounds.maxRow - bounds.minRow + 1) / ROWS * 100}%`,
-              border: `2.5px solid ${isValid ? '#7986cb' : 'rgba(180,180,200,0.65)'}`,
-              background: isValid ? 'rgba(80,90,210,0.13)' : 'rgba(180,180,200,0.05)',
-              borderRadius: 4,
+              border: `2.5px solid ${isValid ? '#3b82f6' : 'rgba(100,100,140,0.45)'}`,
+              background: isValid ? 'rgba(59,130,246,0.10)' : 'rgba(100,100,140,0.04)',
+              borderRadius: HINT_RADIUS,
               boxSizing: 'border-box',
               pointerEvents: 'none',
               zIndex: 10,
               transition: 'border-color 0.1s, background 0.1s',
             }}>
-              {/* Speech bubble tooltip */}
               {selectionSum > 0 && (
                 <div style={{
                   position: 'absolute',
                   top: -34,
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  background: isValid ? '#5c6bc0' : 'rgba(30,30,40,0.92)',
+                  background: isValid ? '#3b82f6' : 'rgba(40,40,60,0.88)',
                   color: '#fff',
                   borderRadius: 6,
                   padding: '4px 10px',
@@ -436,19 +475,17 @@ export default function LemonGame() {
                   fontWeight: 800,
                   whiteSpace: 'nowrap',
                   pointerEvents: 'none',
+                  fontFamily: "'Pretendard', system-ui, sans-serif",
                 }}>
                   {selectionSum}{isValid ? ' ✓' : ''}
-                  {/* Triangle tail pointing down */}
                   <div style={{
                     position: 'absolute',
-                    bottom: -7,
-                    left: '50%',
+                    bottom: -7, left: '50%',
                     transform: 'translateX(-50%)',
-                    width: 0,
-                    height: 0,
+                    width: 0, height: 0,
                     borderLeft: '7px solid transparent',
                     borderRight: '7px solid transparent',
-                    borderTop: `7px solid ${isValid ? '#5c6bc0' : 'rgba(30,30,40,0.92)'}`,
+                    borderTop: `7px solid ${isValid ? '#3b82f6' : 'rgba(40,40,60,0.88)'}`,
                   }} />
                 </div>
               )}
@@ -459,20 +496,19 @@ export default function LemonGame() {
           {floats.map(f => (
             <div key={f.id} style={{
               position: 'absolute',
-              left: f.leftPct,
-              top: f.topPct,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-start',
-              gap: 1,
-              pointerEvents: 'none',
-              zIndex: 20,
+              left: f.leftPct, top: f.topPct,
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'flex-start', gap: 1,
+              pointerEvents: 'none', zIndex: 20,
               animation: 'floatUp 1.1s ease-out forwards',
-              textShadow: '0 1px 4px rgba(0,0,0,0.8)',
               whiteSpace: 'nowrap',
+              fontFamily: "'Pretendard', system-ui, sans-serif",
             }}>
               {f.lines.map((ln, i) => (
-                <span key={i} style={{ color: ln.color, fontWeight: 900, fontSize: ln.size }}>{ln.text}</span>
+                <span key={i} style={{
+                  color: ln.color, fontWeight: 900, fontSize: ln.size,
+                  textShadow: '0 1px 3px rgba(255,255,255,0.9)',
+                }}>{ln.text}</span>
               ))}
             </div>
           ))}
@@ -491,38 +527,34 @@ export default function LemonGame() {
             <div style={{ fontSize: 52, marginBottom: 8 }}>🍋</div>
             <h1 style={S.cardTitle}>레몬 게임</h1>
             <p style={S.cardDesc}>
-              드래그로 합이 <b style={{ color: '#ffe066' }}>10</b>이 되는<br />
+              드래그로 합이 <b style={{ color: '#ea580c' }}>10</b>이 되는<br />
               숫자들을 선택해 지워보세요!
             </p>
             <div style={S.ruleList}>
-              <div>많이 지울수록 보너스 ✨</div>
-              <div>연속 클리어 콤보 🔥</div>
-              <div>황금 레몬을 찾아라 ⭐</div>
+              <div>많이 지울수록 보너스</div>
+              <div>연속 클리어 콤보</div>
+              <div>황금 레몬을 찾아라</div>
             </div>
             <button onClick={startGame} style={S.btn}>시작하기</button>
           </div>
         </div>
       )}
-
-      <style>{`
-        @keyframes goldenSparkle {
-          0%   { transform: translateY(0) scale(1); opacity: 1; }
-          100% { transform: translateY(-38px) scale(0.3); opacity: 0; }
-        }
-      `}</style>
     </div>
   )
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
+const FONT = "'Pretendard', system-ui, -apple-system, sans-serif"
+
 const S = {
   root: {
     width: '100dvw',
     height: '100dvh',
     display: 'flex',
     flexDirection: 'column',
-    background: 'linear-gradient(160deg, #0d1117 0%, #1c1c28 100%)',
+    background: '#f2f2f7',
     overflow: 'hidden',
+    fontFamily: FONT,
   },
   header: {
     display: 'flex',
@@ -531,8 +563,8 @@ const S = {
     padding: '0 14px',
     height: 46,
     flexShrink: 0,
-    background: 'rgba(0,0,0,0.5)',
-    borderBottom: '1px solid rgba(255,220,50,0.13)',
+    background: '#ffffff',
+    borderBottom: '1px solid rgba(0,0,0,0.08)',
     position: 'relative',
   },
   headerCenter: {
@@ -546,19 +578,23 @@ const S = {
     lineHeight: 1,
   },
   comboTag: {
-    color: '#ff9900',
+    color: '#ea580c',
     fontWeight: 800,
     fontSize: 11,
     animation: 'pulse 0.5s ease infinite',
+    fontFamily: FONT,
   },
   scoreValue: {
-    color: '#fff',
+    color: '#1c1c1e',
     fontWeight: 800,
     fontSize: 20,
     lineHeight: 1,
+    fontFamily: FONT,
+    display: 'inline-block',
+    transformOrigin: 'center',
   },
   restartBtn: {
-    background: 'linear-gradient(135deg, #ffe066 0%, #ffc200 100%)',
+    background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
     border: 'none',
     borderRadius: 8,
     padding: '6px 16px',
@@ -567,6 +603,7 @@ const S = {
     color: '#3d1800',
     cursor: 'pointer',
     flexShrink: 0,
+    fontFamily: FONT,
   },
   gridWrapper: {
     flex: 1,
@@ -599,34 +636,36 @@ const S = {
     justifyContent: 'center',
     fontWeight: 900,
     fontSize: 'clamp(10px, 1.8vw, 22px)',
+    fontFamily: FONT,
     position: 'relative',
     userSelect: 'none',
-    transition: 'transform 0.15s ease, opacity 0.15s ease, background 0.08s, box-shadow 0.08s',
+    transition: 'transform 0.12s ease, opacity 0.12s ease, background 0.08s, box-shadow 0.08s',
   },
   overlay: {
     position: 'fixed',
     inset: 0,
-    background: 'rgba(0,0,0,0.72)',
+    background: 'rgba(0,0,0,0.30)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 100,
-    backdropFilter: 'blur(5px)',
+    backdropFilter: 'blur(6px)',
   },
   card: {
-    background: 'linear-gradient(135deg, #1a1f30 0%, #0d1117 100%)',
-    border: '1px solid rgba(255,220,50,0.22)',
-    borderRadius: 18,
-    padding: '22px 30px',
+    background: '#ffffff',
+    border: '1px solid rgba(0,0,0,0.09)',
+    borderRadius: 20,
+    padding: '24px 32px',
     textAlign: 'center',
     maxWidth: 300,
-    boxShadow: '0 8px 32px rgba(0,0,0,0.65)',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+    fontFamily: FONT,
   },
-  cardTitle: { color: '#ffe066', fontSize: 26, fontWeight: 900, marginBottom: 10 },
-  cardDesc: { color: '#aaa', fontSize: 13, lineHeight: 1.7, marginBottom: 14 },
-  ruleList: { color: '#777', fontSize: 12, lineHeight: 2.1, marginBottom: 18 },
+  cardTitle: { color: '#ea580c', fontSize: 26, fontWeight: 900, marginBottom: 10 },
+  cardDesc: { color: '#6b7280', fontSize: 13, lineHeight: 1.7, marginBottom: 14 },
+  ruleList: { color: '#9ca3af', fontSize: 12, lineHeight: 2.2, marginBottom: 18 },
   btn: {
-    background: 'linear-gradient(135deg, #ffe066 0%, #ffc200 100%)',
+    background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
     border: 'none',
     borderRadius: 10,
     padding: '11px 36px',
@@ -634,5 +673,6 @@ const S = {
     fontWeight: 800,
     color: '#3d1800',
     cursor: 'pointer',
+    fontFamily: FONT,
   },
 }
