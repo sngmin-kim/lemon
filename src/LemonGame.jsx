@@ -174,25 +174,25 @@ export default function LemonGame() {
   const effectIdRef = useRef(0)
   const gridStateRef = useRef(grid)
   const comboRef = useRef(combo)
-  const scoreTargetRef = useRef(0)
   const rafRef = useRef(null)
+  const displayScoreRef = useRef(0)
 
   useEffect(() => { gridStateRef.current = grid }, [grid])
   useEffect(() => { comboRef.current = combo }, [combo])
 
-  // ── Score count-up animation ──
+  // ── Score count-up animation — fixed 650ms to match scorePop CSS ──
   useEffect(() => {
-    scoreTargetRef.current = score
-    const tick = () => {
-      setDisplayScore(prev => {
-        const target = scoreTargetRef.current
-        if (prev >= target) return target
-        const diff = target - prev
-        const step = diff > 100 ? Math.ceil(diff / 8) : diff > 20 ? 4 : 1
-        const next = Math.min(prev + step, target)
-        if (next < target) rafRef.current = requestAnimationFrame(tick)
-        return next
-      })
+    const startVal = displayScoreRef.current
+    const endVal = score
+    if (startVal === endVal) return
+    const startTime = performance.now()
+    const tick = (now) => {
+      const t = Math.min((now - startTime) / 650, 1)
+      const eased = 1 - (1 - t) * (1 - t) // ease-out quad
+      const val = Math.round(startVal + (endVal - startVal) * eased)
+      displayScoreRef.current = val
+      setDisplayScore(val)
+      if (t < 1) rafRef.current = requestAnimationFrame(tick)
     }
     cancelAnimationFrame(rafRef.current)
     rafRef.current = requestAnimationFrame(tick)
@@ -365,7 +365,7 @@ export default function LemonGame() {
           {combo >= 2 && <div style={S.comboTag}>{combo}x COMBO!</div>}
           <div
             key={score}
-            style={{ ...S.scoreValue, animation: score > 0 ? 'scorePop 0.65s ease-out' : 'none' }}
+            style={{ ...S.scoreValue, animation: score > 0 ? 'scorePop 650ms ease-out' : 'none' }}
           >
             {displayScore.toLocaleString()}
           </div>
