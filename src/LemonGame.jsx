@@ -196,18 +196,17 @@ export default function LemonGame() {
     }
     const diff = endVal - startVal
     const stepSize = diff > 100 ? Math.ceil(diff / 16) : diff > 20 ? 2 : 1
-    const STEP_MS = 50 // 한 스텝당 50ms
     let cur = startVal
-    let lastStep = performance.now()
+    let frame = 0
 
     setScoreVisual(PULSE)
 
-    const tick = (now) => {
-      if (now - lastStep >= STEP_MS) {
+    const tick = () => {
+      frame++
+      if (frame % 2 === 0) {
         cur = Math.min(cur + stepSize, endVal)
         displayScoreRef.current = cur
         setDisplayScore(cur)
-        lastStep = now
       }
       if (cur < endVal) {
         rafRef.current = requestAnimationFrame(tick)
