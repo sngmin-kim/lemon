@@ -196,7 +196,7 @@ export default function LemonGame() {
       return
     }
     const diff = endVal - startVal
-    const stepSize = diff > 100 ? Math.ceil(diff / 8) : diff > 20 ? 4 : 1
+    const stepSize = diff > 100 ? Math.ceil(diff / 16) : diff > 20 ? 2 : 1
     let cur = startVal
     let pulseFrame = false // alternates: pulse up → pulse down → next step
 
