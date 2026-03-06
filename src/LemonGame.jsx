@@ -608,7 +608,9 @@ const S = {
   gridWrapper: {
     flex: 1,
     minHeight: 0,
-    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     overflow: 'hidden',
   },
   grid: {
@@ -617,6 +619,7 @@ const S = {
     gridTemplateRows: `repeat(${ROWS}, 1fr)`,
     aspectRatio: `${COLS} / ${ROWS}`,
     width: '100%',
+    maxHeight: '100%',
     position: 'relative',
     touchAction: 'none',
     cursor: 'crosshair',
