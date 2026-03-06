@@ -31,7 +31,6 @@ function findClearableAreas(grid) {
   const val = Array.from({ length: ROWS }, (_, r) =>
     Array.from({ length: COLS }, (_, c) => (grid[r][c].isCleared ? 0 : grid[r][c].value))
   )
-  // Build prefix sum for value and count of non-cleared tiles
   const PV = Array.from({ length: ROWS + 1 }, () => new Array(COLS + 1).fill(0))
   const PC = Array.from({ length: ROWS + 1 }, () => new Array(COLS + 1).fill(0))
   for (let r = 1; r <= ROWS; r++) {
@@ -54,7 +53,7 @@ function findClearableAreas(grid) {
           }
 
   areas.sort((a, b) => b.count - a.count)
-  return areas.slice(0, 50) // keep top 50 by tile count
+  return areas.slice(0, 50)
 }
 
 function initGrid() {
@@ -77,7 +76,7 @@ function getBounds(drag) {
   }
 }
 
-// Radial sparkle burst for golden clears: 8 particles rotating outward
+// Radial sparkle burst for golden clears
 function GoldenBurst({ leftPct, topPct }) {
   return (
     <>
@@ -101,7 +100,6 @@ function GoldenBurst({ leftPct, topPct }) {
             height: 7,
             borderRadius: '50%',
             background: 'radial-gradient(circle, #fff 0%, #ffd700 55%, #ff9500 100%)',
-            boxShadow: '0 0 5px #ffd700',
             animation: 'goldenSparkle 0.65s ease-out forwards',
           }} />
         </div>
@@ -120,9 +118,7 @@ const Tile = memo(function Tile({ value, isCleared, isSelected, isValid, isGolde
         ? 'linear-gradient(145deg, #fff59d 0%, #ffb300 100%)'
         : 'linear-gradient(145deg, #ffe082 0%, #ffa000 100%)')
       : 'linear-gradient(145deg, #ffd54f 0%, #e65100 100%)'
-    shadow = isSelected
-      ? `0 0 14px rgba(255,180,0,${isValid ? 1 : 0.6})`
-      : '0 2px 6px rgba(0,0,0,0.55), inset 0 1px 2px rgba(255,255,255,0.35)'
+    shadow = '0 2px 6px rgba(0,0,0,0.55), inset 0 1px 2px rgba(255,255,255,0.35)'
     textColor = '#3d1400'
   } else {
     bg = isSelected
@@ -130,11 +126,7 @@ const Tile = memo(function Tile({ value, isCleared, isSelected, isValid, isGolde
         ? 'linear-gradient(145deg, #7986cb 0%, #3949ab 100%)'
         : 'linear-gradient(145deg, #757575 0%, #424242 100%)')
       : 'linear-gradient(145deg, #62626e 0%, #3a3a46 100%)'
-    shadow = isSelected
-      ? (isValid
-        ? '0 0 14px rgba(100,120,255,0.85)'
-        : '0 0 8px rgba(160,160,160,0.5)')
-      : '0 2px 5px rgba(0,0,0,0.55), inset 0 1px 2px rgba(255,255,255,0.07)'
+    shadow = '0 2px 5px rgba(0,0,0,0.55), inset 0 1px 2px rgba(255,255,255,0.07)'
     textColor = '#e8e8f2'
   }
 
@@ -151,7 +143,6 @@ const Tile = memo(function Tile({ value, isCleared, isSelected, isValid, isGolde
         }}
       >
         {!isCleared && value}
-        {isGolden && !isCleared && <span style={S.goldenStar}>★</span>}
       </div>
     </div>
   )
@@ -168,12 +159,11 @@ export default function LemonGame() {
   const [grid, setGrid] = useState(() => initGrid())
   const [score, setScore] = useState(0)
   const [timeLeft, setTimeLeft] = useState(GAME_DURATION)
-  const [gameStatus, setGameStatus] = useState('idle') // 'idle' | 'playing' | 'over'
+  const [gameStatus, setGameStatus] = useState('idle')
   const [combo, setCombo] = useState(0)
   const [drag, setDrag] = useState(null)
-  const [floats, setFloats] = useState([])       // { id, lines:[{text,color,size}], leftPct, topPct }
-  const [bursts, setBursts] = useState([])       // { id, leftPct, topPct }
-  const [gridFlash, setGridFlash] = useState(null)
+  const [floats, setFloats] = useState([])
+  const [bursts, setBursts] = useState([])
   const [clearableAreas, setClearableAreas] = useState([])
 
   const gridRef = useRef(null)
@@ -210,7 +200,7 @@ export default function LemonGame() {
     clearTimeout(comboTimerRef.current)
     setGrid(initGrid())
     setScore(0); setTimeLeft(GAME_DURATION); setCombo(0)
-    setDrag(null); setFloats([]); setBursts([]); setGridFlash(null); setClearableAreas([])
+    setDrag(null); setFloats([]); setBursts([]); setClearableAreas([])
     setGameStatus('playing')
   }, [])
 
@@ -294,19 +284,11 @@ export default function LemonGame() {
       setFloats(prev => [...prev, { id, lines, leftPct, topPct }])
       setTimeout(() => setFloats(prev => prev.filter(f => f.id !== id)), 1100)
 
-      // ── Flash ──
+      // ── Golden burst ──
       if (goldenBonus > 0) {
-        setGridFlash('rgba(255,215,0,0.22)')
-        setTimeout(() => setGridFlash(null), 380)
         const bid = ++effectIdRef.current
         setBursts(prev => [...prev, { id: bid, leftPct, topPct }])
         setTimeout(() => setBursts(prev => prev.filter(b => b.id !== bid)), 700)
-      } else if (tiles.length >= 5) {
-        setGridFlash('rgba(100,110,255,0.18)')
-        setTimeout(() => setGridFlash(null), 320)
-      } else if (tiles.length >= 3) {
-        setGridFlash('rgba(255,140,0,0.12)')
-        setTimeout(() => setGridFlash(null), 250)
       }
     }
 
@@ -323,38 +305,40 @@ export default function LemonGame() {
   }
   const isValid = selectionSum === TARGET_SUM
 
+  const timerPct = timeLeft / GAME_DURATION * 100
   const timerColor = timeLeft <= 10 ? '#ff4444' : timeLeft <= 30 ? '#ffaa00' : '#7fff7f'
-  const timerAnim = timeLeft <= 10 ? 'timerWarning 1s ease infinite' : 'none'
-  const timeStr = `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, '0')}`
 
   return (
     <div style={S.root}>
 
       {/* ── Header ── */}
       <header style={S.header}>
-        <div style={S.headerLeft}>
-          <span style={{ fontSize: 20 }}>🍋</span>
-          <span style={S.logoText}>LEMON</span>
-        </div>
-        <div style={S.headerRight}>
+        {/* Timer progress bar — full width, shrinks over time */}
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          height: 4,
+          width: gameStatus === 'playing' ? `${timerPct}%` : (gameStatus === 'idle' ? '100%' : '0%'),
+          background: timerColor,
+          transition: 'width 1s linear, background 0.5s',
+          borderRadius: '0 2px 0 0',
+        }} />
+
+        {/* Score — centered */}
+        <div style={S.headerCenter}>
           {combo >= 2 && <div style={S.comboTag}>{combo}x COMBO!</div>}
-          <div style={S.statBox}>
-            <span style={S.statLabel}>SCORE</span>
-            <span style={S.statValue}>{score.toLocaleString()}</span>
-          </div>
-          <div style={S.statBox}>
-            <span style={S.statLabel}>TIME</span>
-            <span style={{ ...S.statValue, color: timerColor, animation: timerAnim }}>{timeStr}</span>
-          </div>
+          <div style={S.scoreValue}>{score.toLocaleString()}</div>
         </div>
+
+        {/* Restart button — right side, only when game over */}
+        {gameStatus === 'over' && (
+          <button onClick={startGame} style={S.restartBtn}>다시하기</button>
+        )}
       </header>
 
       {/* ── Grid ── */}
       <div style={S.gridWrapper}>
-        {gridFlash && (
-          <div style={{ position: 'absolute', inset: 0, background: gridFlash, pointerEvents: 'none', zIndex: 25, borderRadius: 4 }} />
-        )}
-
         <div
           ref={gridRef}
           style={S.grid}
@@ -424,22 +408,35 @@ export default function LemonGame() {
               zIndex: 10,
               transition: 'border-color 0.1s, background 0.1s',
             }}>
+              {/* Speech bubble tooltip */}
               {selectionSum > 0 && (
                 <div style={{
                   position: 'absolute',
-                  top: -22,
+                  top: -34,
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  background: isValid ? '#5c6bc0' : 'rgba(30,30,40,0.9)',
+                  background: isValid ? '#5c6bc0' : 'rgba(30,30,40,0.92)',
                   color: '#fff',
-                  borderRadius: 5,
-                  padding: '2px 8px',
-                  fontSize: 12,
+                  borderRadius: 6,
+                  padding: '4px 10px',
+                  fontSize: 13,
                   fontWeight: 800,
                   whiteSpace: 'nowrap',
                   pointerEvents: 'none',
                 }}>
                   {selectionSum}{isValid ? ' ✓' : ''}
+                  {/* Triangle tail pointing down */}
+                  <div style={{
+                    position: 'absolute',
+                    bottom: -7,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: 0,
+                    height: 0,
+                    borderLeft: '7px solid transparent',
+                    borderRight: '7px solid transparent',
+                    borderTop: `7px solid ${isValid ? '#5c6bc0' : 'rgba(30,30,40,0.92)'}`,
+                  }} />
                 </div>
               )}
             </div>
@@ -458,7 +455,7 @@ export default function LemonGame() {
               pointerEvents: 'none',
               zIndex: 20,
               animation: 'floatUp 1.1s ease-out forwards',
-              textShadow: '0 2px 6px rgba(0,0,0,0.9)',
+              textShadow: '0 1px 4px rgba(0,0,0,0.8)',
               whiteSpace: 'nowrap',
             }}>
               {f.lines.map((ln, i) => (
@@ -494,28 +491,6 @@ export default function LemonGame() {
         </div>
       )}
 
-      {/* ── Game Over overlay ── */}
-      {gameStatus === 'over' && (
-        <div style={{ ...S.overlay, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(3px)' }}>
-          <div style={{ ...S.card, animation: 'popIn 0.35s ease' }}>
-            <div style={{ fontSize: 44, marginBottom: 4 }}>🍋</div>
-            <h2 style={S.cardTitle}>게임 종료!</h2>
-            <p style={{ ...S.cardDesc, marginBottom: 4 }}>최종 점수</p>
-            <div style={S.finalScore}>{score.toLocaleString()}</div>
-            <div style={S.hintBox}>
-              <span style={{ color: '#4fc3a1', fontWeight: 700 }}>
-                {clearableAreas.length}
-              </span>
-              개의 영역을 더 지울 수 있었어요
-              <div style={{ marginTop: 4, fontSize: 10, color: '#666' }}>
-                🟩 5개+ &nbsp;&nbsp; 🟦 3–4개 &nbsp;&nbsp; ⬜ 1–2개
-              </div>
-            </div>
-            <button onClick={startGame} style={S.btn}>다시하기</button>
-          </div>
-        </div>
-      )}
-
       <style>{`
         @keyframes goldenSparkle {
           0%   { transform: translateY(0) scale(1); opacity: 1; }
@@ -539,36 +514,63 @@ const S = {
   header: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     padding: '0 14px',
     height: 46,
     flexShrink: 0,
     background: 'rgba(0,0,0,0.5)',
     borderBottom: '1px solid rgba(255,220,50,0.13)',
+    position: 'relative',
   },
-  headerLeft: { display: 'flex', alignItems: 'center', gap: 7 },
-  logoText: { color: '#ffe066', fontWeight: 800, fontSize: 17, letterSpacing: '2px' },
-  headerRight: { display: 'flex', alignItems: 'center', gap: 16 },
+  headerCenter: {
+    position: 'absolute',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 0,
+    lineHeight: 1,
+  },
   comboTag: {
-    color: '#ff9900', fontWeight: 800, fontSize: 13,
+    color: '#ff9900',
+    fontWeight: 800,
+    fontSize: 11,
     animation: 'pulse 0.5s ease infinite',
-    textShadow: '0 0 8px rgba(255,153,0,0.7)',
   },
-  statBox: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 },
-  statLabel: { color: '#666', fontSize: 9, fontWeight: 600, letterSpacing: '1px' },
-  statValue: { color: '#fff', fontWeight: 800, fontSize: 19, lineHeight: 1 },
+  scoreValue: {
+    color: '#fff',
+    fontWeight: 800,
+    fontSize: 20,
+    lineHeight: 1,
+  },
+  restartBtn: {
+    background: 'linear-gradient(135deg, #ffe066 0%, #ffc200 100%)',
+    border: 'none',
+    borderRadius: 8,
+    padding: '6px 16px',
+    fontSize: 13,
+    fontWeight: 800,
+    color: '#3d1800',
+    cursor: 'pointer',
+    flexShrink: 0,
+  },
   gridWrapper: {
     flex: 1,
-    padding: '4px 6px',
     minHeight: 0,
     position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '6px',
   },
   grid: {
     display: 'grid',
     gridTemplateColumns: `repeat(${COLS}, 1fr)`,
     gridTemplateRows: `repeat(${ROWS}, 1fr)`,
-    width: '100%',
-    height: '100%',
+    aspectRatio: `${COLS} / ${ROWS}`,
+    maxWidth: '100%',
+    maxHeight: '100%',
     position: 'relative',
     touchAction: 'none',
     cursor: 'crosshair',
@@ -581,25 +583,16 @@ const S = {
   },
   tileInner: {
     width: '100%',
-    height: '100%',
-    borderRadius: '20%',          // rounded square ★
+    aspectRatio: '1',
+    borderRadius: '20%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontWeight: 900,
-    fontSize: 'clamp(11px, 2vw, 24px)',   // bigger & bolder ★
+    fontSize: 'clamp(10px, 1.8vw, 22px)',
     position: 'relative',
     userSelect: 'none',
     transition: 'transform 0.15s ease, opacity 0.15s ease, background 0.08s, box-shadow 0.08s',
-  },
-  goldenStar: {
-    position: 'absolute',
-    top: 2,
-    right: 3,
-    fontSize: '0.4em',
-    color: 'rgba(255,255,255,0.75)',
-    lineHeight: 1,
-    pointerEvents: 'none',
   },
   overlay: {
     position: 'fixed',
@@ -623,22 +616,6 @@ const S = {
   cardTitle: { color: '#ffe066', fontSize: 26, fontWeight: 900, marginBottom: 10 },
   cardDesc: { color: '#aaa', fontSize: 13, lineHeight: 1.7, marginBottom: 14 },
   ruleList: { color: '#777', fontSize: 12, lineHeight: 2.1, marginBottom: 18 },
-  hintBox: {
-    color: '#888',
-    fontSize: 12,
-    lineHeight: 1.6,
-    marginBottom: 18,
-    background: 'rgba(255,255,255,0.04)',
-    borderRadius: 8,
-    padding: '8px 12px',
-  },
-  finalScore: {
-    color: '#fff',
-    fontSize: 46,
-    fontWeight: 900,
-    marginBottom: 12,
-    textShadow: '0 2px 12px rgba(255,220,50,0.35)',
-  },
   btn: {
     background: 'linear-gradient(135deg, #ffe066 0%, #ffc200 100%)',
     border: 'none',
@@ -648,6 +625,5 @@ const S = {
     fontWeight: 800,
     color: '#3d1800',
     cursor: 'pointer',
-    boxShadow: '0 3px 10px rgba(255,194,0,0.4)',
   },
 }
