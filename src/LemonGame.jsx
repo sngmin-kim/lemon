@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, memo } from 'react'
 
-const ROWS = 10
-const COLS = 17
+const ROWS = 17
+const COLS = 10
 const TARGET_SUM = 10
 const GAME_DURATION = 120
 const COMBO_TIMEOUT_MS = 2500
@@ -641,7 +641,8 @@ const S = {
     gridTemplateColumns: `repeat(${COLS}, 1fr)`,
     gridTemplateRows: `repeat(${ROWS}, 1fr)`,
     aspectRatio: `${COLS} / ${ROWS}`,
-    width: `min(100%, calc((100dvh - 46px) * ${(COLS / ROWS).toFixed(4)}))`,
+    height: `min(calc(100dvh - 46px), calc(100dvw * ${(ROWS / COLS).toFixed(4)}))`,
+    width: `min(100dvw, calc((100dvh - 46px) * ${(COLS / ROWS).toFixed(4)}))`,
     position: 'relative',
     touchAction: 'none',
     cursor: 'crosshair',
