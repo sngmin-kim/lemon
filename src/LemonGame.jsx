@@ -176,12 +176,31 @@ export default function LemonGame() {
   const comboRef = useRef(combo)
   const rafRef = useRef(null)
   const displayScoreRef = useRef(0)
+  const scoreRef = useRef(0)
+  const parentMessages = useRef([])
   const [scoreVisual, setScoreVisual] = useState({ scale: 1, color: '#1c1c1e' })
   const PULSE = { scale: 1.7, color: '#f97316' }
   const NORMAL = { scale: 1, color: '#1c1c1e' }
 
   useEffect(() => { gridStateRef.current = grid }, [grid])
   useEffect(() => { comboRef.current = combo }, [combo])
+  useEffect(() => { scoreRef.current = score }, [score])
+
+  // ── postMessage: 부모 창에서 오는 메시지 수집 ──
+  useEffect(() => {
+    const handler = (e) => { parentMessages.current.push(e.data) }
+    window.addEventListener('message', handler)
+    return () => window.removeEventListener('message', handler)
+  }, [])
+
+  // ── 게임 종료 시 부모 창으로 점수 전송 ──
+  useEffect(() => {
+    if (gameStatus === 'over') {
+      const msg = { type: 'GAME_SCORE', payload: { score: scoreRef.current } }
+      console.log('[LemonGame] postMessage sending:', msg, '| window.parent === window:', window.parent === window)
+      window.parent.postMessage(msg, '*')
+    }
+  }, [gameStatus])
 
   // ── Score count-up: 시작하면 커지고 컬러 변경 → 카운트 → 끝나면 원래대로 ──
   useEffect(() => {
@@ -197,13 +216,13 @@ export default function LemonGame() {
     const diff = endVal - startVal
     const stepSize = diff > 100 ? Math.ceil(diff / 16) : diff > 20 ? 2 : 1
     let cur = startVal
-    let frame = 0
+    let lastTime = 0
 
     setScoreVisual(PULSE)
 
-    const tick = () => {
-      frame++
-      if (frame % 2 === 0) {
+    const tick = (ts) => {
+      if (ts - lastTime >= 32) {
+        lastTime = ts
         cur = Math.min(cur + stepSize, endVal)
         displayScoreRef.current = cur
         setDisplayScore(cur)
@@ -394,8 +413,8 @@ export default function LemonGame() {
           </div>
         </div>
 
-        {/* Restart button */}
-        {gameStatus === 'over' && (
+        {/* Restart button (playing 중에도 접근 가능하도록 항상 노출) */}
+        {gameStatus === 'playing' && (
           <button onClick={startGame} style={S.restartBtn}>다시하기</button>
         )}
       </header>
@@ -543,6 +562,28 @@ export default function LemonGame() {
         </div>
       </div>
 
+      {/* ── Game Over modal ── */}
+      {gameStatus === 'over' && (
+        <div style={S.overlay}>
+          <div style={{ ...S.card, animation: 'popIn 0.35s ease' }}>
+            <div style={{ fontSize: 52, marginBottom: 6 }}>🍋</div>
+            <h1 style={S.cardTitle}>게임 종료!</h1>
+            <div style={{
+              fontSize: 48,
+              fontWeight: 900,
+              color: '#ea580c',
+              fontFamily: FONT,
+              lineHeight: 1,
+              marginBottom: 4,
+            }}>
+              {score.toLocaleString()}
+            </div>
+            <p style={{ color: '#9ca3af', fontSize: 13, marginBottom: 20, fontFamily: FONT }}>점</p>
+            <button onClick={startGame} style={S.btn}>다시하기</button>
+          </div>
+        </div>
+      )}
+
       {/* ── Idle overlay ── */}
       {gameStatus === 'idle' && (
         <div style={S.overlay}>
@@ -646,12 +687,15 @@ const S = {
     position: 'relative',
     touchAction: 'none',
     cursor: 'crosshair',
+    contain: 'layout style paint',
+    willChange: 'contents',
   },
   tileOuter: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     padding: '2px',
+    contain: 'layout style',
   },
   tileInner: {
     width: '100%',
@@ -666,6 +710,7 @@ const S = {
     position: 'relative',
     userSelect: 'none',
     transition: 'transform 0.12s ease, opacity 0.12s ease, background 0.08s, box-shadow 0.08s',
+    willChange: 'transform, opacity',
   },
   overlay: {
     position: 'fixed',
